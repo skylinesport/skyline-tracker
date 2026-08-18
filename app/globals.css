@@ -26,6 +26,7 @@
   --line: rgba(255,255,255,.08);
   --line-2: rgba(255,255,255,.15);
   --red: #e5484d;
+  --amber: #f59e0b;
   --ctl-h: 34px;
 }
 
@@ -256,21 +257,49 @@ input[type="search"]::-webkit-search-cancel-button {
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
 /* Links & docs page */
-.links-head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; }
+.links-wrap { max-width: 1180px; padding-left: 32px; padding-right: 32px; }
+
+.links-head { margin-bottom: 22px; }
+.links-head .back { display: inline-block; font-size: 13px; color: var(--ink-2); text-decoration: none; margin-bottom: 6px; }
+.links-head .back:hover { color: var(--ink); }
 .links-head h1 { font-size: 22px; font-weight: 800; letter-spacing: -.5px; }
-.back { color: var(--ink-2); text-decoration: none; font-size: 13px; }
-.back:hover { color: var(--ink); }
+.links-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
 .links-note { color: var(--ink-2); font-size: 14px; line-height: 1.7; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
 .links-note code { background: #23271f; padding: 2px 6px; border-radius: 5px; font-size: 12.5px; }
-.links-scroll { overflow-x: auto; }
-.links-table { width: 100%; border-collapse: collapse; min-width: 520px; }
-.links-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--ink-3); padding: 0 10px 10px 0; font-weight: 600; }
-.links-table td { padding: 5px 10px 5px 0; vertical-align: middle; }
-.links-table .name-col { width: 34%; }
-.links-table .input { width: 100%; }
-.row-actions { display: flex; gap: 4px; justify-content: flex-end; white-space: nowrap; width: 1%; }
+
+/* Shared column ratios (header + rows) */
+.name-field { flex: 0 0 300px; }
+.url-field { flex: 1; min-width: 0; }
+.actions-spacer { flex: 0 0 64px; }
+
+.link-head-row { display: flex; align-items: center; gap: 12px; padding-bottom: 8px; }
+.link-head-row > div { font-size: 11px; letter-spacing: .3px; color: var(--ink-3); font-weight: 600; }
+
+.link-row { display: flex; align-items: center; gap: 12px; padding: 3px 0; }
+/* Read-only display cells match the input height so rows stay aligned. */
+.link-name, .link-url { line-height: 34px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link-name { font-size: 13.5px; color: var(--ink); }
+.link-url { display: block; font-size: 13px; color: var(--ink-2); text-decoration: none; }
+.link-url:hover { color: var(--lime); text-decoration: underline; }
+.link-url.disabled { color: var(--ink-3); pointer-events: none; }
+.links-empty { color: var(--ink-3); font-size: 13px; padding: 14px 0; }
+.row-actions { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; opacity: 0; transition: opacity .12s; }
+.link-row:hover .row-actions,
+.link-row:focus-within .row-actions { opacity: 1; }
+.row-actions .icon-btn.danger { margin-left: 8px; }
+.icon-btn { text-decoration: none; }
 .icon-btn.disabled { opacity: .35; pointer-events: none; }
-.links-empty { color: var(--ink-3); font-size: 13px; padding: 18px 0; }
-.links-foot { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
-.saved-msg { font-size: 12px; color: var(--lime); }
-.links-note-inline { font-size: 12px; color: var(--ink-3); }
+.icon-btn.confirming { width: auto; padding: 0 8px; font-size: 11.5px; background: rgba(229,72,77,.13); color: var(--red); }
+
+.links-foot { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+.save-quiet {
+  display: inline-flex; align-items: center; height: var(--ctl-h);
+  font: inherit; font-size: 13px; font-weight: 500; letter-spacing: -.005em;
+  color: var(--ink-2); background: transparent; border: 1px solid var(--line);
+  border-radius: 9px; padding: 0 15px; cursor: pointer;
+  transition: border-color .12s, color .12s;
+}
+.save-quiet:hover { border-color: var(--line-2); color: var(--ink); }
+.status-line { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-3); }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }

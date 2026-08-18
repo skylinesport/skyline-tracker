@@ -1,15 +1,19 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { supabase, isConfigured } from '../../lib/supabaseClient';
 
 export default function LinksPage() {
   const [rows, setRows] = useState(null);
-  const [dirty, setDirty] = useState(false);
+  const [editing, setEditing] = useState(() => new Set());
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [tableMissing, setTableMissing] = useState(false);
+  const [confirmKey, setConfirmKey] = useState(null);
+  const confirmTimer = useRef(null);
+
+  const keyOf = (row) => row.id || row._tmp;
 
   const fetchRows = useCallback(async () => {
     if (!isConfigured) { setRows([]); return; }
@@ -28,27 +32,39 @@ export default function LinksPage() {
     }
     setTableMissing(false);
     setRows(data || []);
-    setDirty(false);
+    setEditing(new Set());
   }, []);
 
   useEffect(() => { fetchRows(); }, [fetchRows]);
+  useEffect(() => () => { if (confirmTimer.current) clearTimeout(confirmTimer.current); }, []);
 
-  const keyOf = (row) => row.id || row._tmp;
+  const startEdit = (key) => setEditing((s) => new Set(s).add(key));
 
-  const addRow = () => {
-    setRows((r) => [...(r || []), { _tmp: crypto.randomUUID(), name: '', url: '' }]);
-    setDirty(true);
-  };
-
-  const update = (key, field, val) => {
+  const update = (key, field, val) =>
     setRows((r) => r.map((x) => (keyOf(x) === key ? { ...x, [field]: val } : x)));
-    setDirty(true);
+
+  const addLink = () => {
+    const row = { _tmp: crypto.randomUUID(), name: '', url: '' };
+    setRows((r) => [...(r || []), row]);
+    setEditing((s) => new Set(s).add(row._tmp));
   };
 
   const del = async (row) => {
-    if (row.id && !confirm('Delete this link?')) return;
     setRows((r) => r.filter((x) => keyOf(x) !== keyOf(row)));
+    setEditing((s) => { const n = new Set(s); n.delete(keyOf(row)); return n; });
     if (row.id) await supabase.from('links').delete().eq('id', row.id);
+  };
+
+  // Two-click delete: first click arms "Delete?" and reverts after 3s.
+  const clickDelete = (row) => {
+    if (confirmTimer.current) clearTimeout(confirmTimer.current);
+    if (confirmKey === keyOf(row)) {
+      setConfirmKey(null);
+      del(row);
+    } else {
+      setConfirmKey(keyOf(row));
+      confirmTimer.current = setTimeout(() => setConfirmKey(null), 3000);
+    }
   };
 
   const save = async () => {
@@ -66,23 +82,42 @@ export default function LinksPage() {
       }
     }
     setSaving(false);
-    await fetchRows();
+    await fetchRows(); // clears editing
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
+  const isEditing = (row) => editing.has(keyOf(row));
+  const showFooter = editing.size > 0 || saving || saved;
+
+  const deleteButton = (row) =>
+    confirmKey === keyOf(row) ? (
+      <button className="icon-btn danger confirming" aria-label="Confirm delete" onClick={() => clickDelete(row)}>
+        Delete?
+      </button>
+    ) : (
+      <button className="icon-btn danger" aria-label="Delete link" onClick={() => clickDelete(row)}>
+        <svg viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M2.8 4.2h8.4M5.6 4.2V2.8h2.8v1.4M4 4.2l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+    );
+
   return (
-    <div className="wrap">
+    <div className="wrap links-wrap">
       <div className="links-head">
         <Link href="/" className="back">← Back to board</Link>
-        <h1>Links &amp; docs</h1>
-        <div className="spacer" />
-        <button className="add-task" onClick={addRow} disabled={!isConfigured || tableMissing}>
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-            <path d="M6.5 2v9M2 6.5h9" stroke="#0d1204" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          Add link
-        </button>
+        <div className="links-title-row">
+          <h1>Links &amp; docs</h1>
+          {isConfigured && !tableMissing && (
+            <button className="add-task" onClick={addLink}>
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                <path d="M6.5 2v9M2 6.5h9" stroke="#0d1204" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              Add link
+            </button>
+          )}
+        </div>
       </div>
 
       {!isConfigured ? (
@@ -96,70 +131,76 @@ export default function LinksPage() {
         <div className="loading">Loading…</div>
       ) : (
         <>
-          <div className="links-scroll">
-            <table className="links-table">
-              <thead>
-                <tr>
-                  <th className="name-col">Name</th>
-                  <th>Link</th>
-                  <th aria-label="actions" />
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={keyOf(row)}>
-                    <td className="name-col">
-                      <input
-                        className="input"
-                        placeholder="e.g. Design file"
-                        value={row.name}
-                        onChange={(e) => update(keyOf(row), 'name', e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        className="input"
-                        type="url"
-                        placeholder="https://…"
-                        value={row.url}
-                        onChange={(e) => update(keyOf(row), 'url', e.target.value)}
-                      />
-                    </td>
-                    <td className="row-actions">
-                      <a
-                        className={`icon-btn${row.url ? '' : ' disabled'}`}
-                        href={row.url || undefined}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label="Open link">
-                        <svg viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                          <path d="M5 3H3.3v7.7H11V9M8.2 3H11v2.8M11 3 6.6 7.4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </a>
-                      <button className="icon-btn danger" onClick={() => del(row)} aria-label="Delete link">
-                        <svg viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                          <path d="M2.8 4.2h8.4M5.6 4.2V2.8h2.8v1.4M4 4.2l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {rows.length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="links-empty">No links yet — click “Add link”.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          <div className="link-head-row">
+            <div className="name-field">Name</div>
+            <div className="url-field">Link</div>
+            <div className="actions-spacer" aria-hidden="true" />
           </div>
 
-          <div className="links-foot">
-            <button className="add-task" onClick={save} disabled={saving || !dirty}>
-              {saving ? 'Saving…' : 'Save changes'}
-            </button>
-            {saved && <span className="saved-msg">Saved ✓</span>}
-            {dirty && !saving && <span className="links-note-inline">Unsaved changes</span>}
-          </div>
+          {rows.length === 0 && <div className="links-empty">No links yet — click “Add link”.</div>}
+
+          {rows.map((row) => (
+            <div className="link-row" key={keyOf(row)}>
+              {isEditing(row) ? (
+                <>
+                  <input
+                    className="input name-field"
+                    placeholder="e.g. Design file"
+                    autoFocus={!row.name && !row.url}
+                    value={row.name}
+                    onChange={(e) => update(keyOf(row), 'name', e.target.value)}
+                  />
+                  <input
+                    className="input url-field"
+                    type="url"
+                    placeholder="https://…"
+                    value={row.url}
+                    onChange={(e) => update(keyOf(row), 'url', e.target.value)}
+                  />
+                </>
+              ) : (
+                <>
+                  <div className="name-field link-name">
+                    {row.name || <span className="muted">Untitled</span>}
+                  </div>
+                  <a
+                    className={`url-field link-url${row.url ? '' : ' disabled'}`}
+                    href={row.url || undefined}
+                    target="_blank"
+                    rel="noopener noreferrer">
+                    {row.url || '—'}
+                  </a>
+                </>
+              )}
+              <div className="row-actions">
+                {!isEditing(row) && (
+                  <button className="icon-btn" aria-label="Edit link" onClick={() => startEdit(keyOf(row))}>
+                    <svg viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                      <path d="M9.4 2.3l2.3 2.3-7 7H2.4V9.3l7-7z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                )}
+                {deleteButton(row)}
+              </div>
+            </div>
+          ))}
+
+          {showFooter && (
+            <div className="links-foot">
+              {(editing.size > 0 || saving) && (
+                <button className="add-task" onClick={save} disabled={saving}>
+                  Save changes
+                </button>
+              )}
+              <span className="status-line">
+                {!saving && !saved && editing.size > 0 && (
+                  <span className="status-dot" style={{ background: 'var(--amber)' }} />
+                )}
+                {saved && <span className="status-dot" style={{ background: 'var(--lime)' }} />}
+                {saving ? 'Saving…' : saved ? 'Saved' : 'Unsaved changes'}
+              </span>
+            </div>
+          )}
         </>
       )}
     </div>
