@@ -1,0 +1,262 @@
+'use client';
+
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { supabase, isConfigured } from '../lib/supabaseClient';
+
+const STATUSES = [
+  { key: 'todo', label: 'To Do', color: 'var(--todo)' },
+  { key: 'in_progress', label: 'In Progress', color: 'var(--progress)' },
+  { key: 'blocked', label: 'Blocked', color: 'var(--blocked)' },
+  { key: 'done', label: 'Done', color: 'var(--done)' },
+];
+const AREAS = ['Backend', 'Frontend', 'Infra', 'Launch'];
+const PRIORITIES = ['P0', 'P1', 'P2'];
+
+const emptyDraft = { title: '', area: 'Backend', status: 'todo', priority: 'P1', notes: '' };
+
+export default function Page() {
+  const [tasks, setTasks] = useState(null);
+  const [areaFilter, setAreaFilter] = useState('ALL');
+  const [priorityFilter, setPriorityFilter] = useState('ALL');
+  const [query, setQuery] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState(emptyDraft);
+  const [editingId, setEditingId] = useState(null);
+  const [editDraft, setEditDraft] = useState(emptyDraft);
+
+  const fetchTasks = useCallback(async () => {
+    if (!isConfigured) return;
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true });
+    if (!error) setTasks(data || []);
+  }, []);
+
+  useEffect(() => {
+    if (!isConfigured) return;
+    fetchTasks();
+    const channel = supabase
+      .channel('tasks-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, fetchTasks)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchTasks]);
+
+  const addTask = async () => {
+    if (!draft.title.trim()) return;
+    const nextOrder = (tasks?.reduce((m, t) => Math.max(m, t.sort_order), 0) ?? 0) + 1;
+    await supabase.from('tasks').insert({ ...draft, title: draft.title.trim(), sort_order: nextOrder });
+    setDraft(emptyDraft); setAdding(false);
+    fetchTasks();
+  };
+
+  const patch = async (id, fields) => {
+    setTasks((prev) => prev?.map((t) => (t.id === id ? { ...t, ...fields } : t))); // optimistic
+    await supabase.from('tasks').update(fields).eq('id', id);
+  };
+
+  const saveEdit = async () => {
+    if (!editDraft.title.trim()) return;
+    await patch(editingId, {
+      title: editDraft.title.trim(), area: editDraft.area,
+      status: editDraft.status, priority: editDraft.priority, notes: editDraft.notes,
+    });
+    setEditingId(null);
+  };
+
+  const remove = async (id) => {
+    if (!confirm('Delete this task?')) return;
+    setTasks((prev) => prev?.filter((t) => t.id !== id));
+    await supabase.from('tasks').delete().eq('id', id);
+  };
+
+  const filtered = useMemo(() => {
+    if (!tasks) return [];
+    const q = query.trim().toLowerCase();
+    return tasks.filter(
+      (t) =>
+        (areaFilter === 'ALL' || t.area === areaFilter) &&
+        (priorityFilter === 'ALL' || t.priority === priorityFilter) &&
+        (!q || t.title.toLowerCase().includes(q) || (t.notes || '').toLowerCase().includes(q)),
+    );
+  }, [tasks, areaFilter, priorityFilter, query]);
+
+  const stats = useMemo(() => {
+    const all = tasks || [];
+    const total = all.length;
+    const done = all.filter((t) => t.status === 'done').length;
+    const p0Left = all.filter((t) => t.priority === 'P0' && t.status !== 'done').length;
+    const byArea = AREAS.map((a) => {
+      const list = all.filter((t) => t.area === a);
+      const d = list.filter((t) => t.status === 'done').length;
+      return { area: a, total: list.length, done: d, pct: list.length ? Math.round((d / list.length) * 100) : 0 };
+    });
+    return { total, done, pct: total ? Math.round((done / total) * 100) : 0, p0Left, byArea };
+  }, [tasks]);
+
+  if (!isConfigured) return <Setup />;
+  if (tasks === null) return <div className="wrap"><div className="loading">Loading tracker…</div></div>;
+
+  return (
+    <div className="wrap">
+      <div className="header">
+        <div className="brand">
+          <div className="dot" />
+          <div>
+            <h1>Skyline Launch Tracker</h1>
+            <p>What&apos;s done · what&apos;s left · updated live by the team</p>
+          </div>
+        </div>
+        <div className="sync"><span className="live" /> live &middot; changes sync for everyone</div>
+      </div>
+
+      {/* Stats */}
+      <div className="stats">
+        <div className="stat">
+          <div className="label">Overall progress</div>
+          <div className="big">{stats.pct}%</div>
+          <div className="sub">{stats.done} of {stats.total} tasks done</div>
+          <div className="progress-track"><div className="progress-fill" style={{ width: `${stats.pct}%` }} /></div>
+        </div>
+        <div className="stat">
+          <div className="label">Launch blockers left</div>
+          <div className="big" style={{ color: stats.p0Left ? 'var(--p0)' : 'var(--lime)' }}>{stats.p0Left}</div>
+          <div className="sub">P0 tasks not done</div>
+        </div>
+        <div className="stat" style={{ gridColumn: 'span 2' }}>
+          <div className="label">Progress by area</div>
+          <div className="areas">
+            {stats.byArea.map((a) => (
+              <div className="area-row" key={a.area}>
+                <span className="name">{a.area}</span>
+                <span className="track"><span className="fill" style={{ width: `${a.pct}%` }} /></span>
+                <span className="pct">{a.done}/{a.total}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      <div className="toolbar">
+        <select className="select" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
+          <option value="ALL">All areas</option>
+          {AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
+        </select>
+        <select className="select" value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
+          <option value="ALL">All priorities</option>
+          {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <input className="input" placeholder="Search…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <div className="spacer" />
+        <button className="btn" onClick={() => setAdding((v) => !v)}>{adding ? 'Close' : '+ Add task'}</button>
+      </div>
+
+      {/* Add panel */}
+      {adding && (
+        <div className="addpanel">
+          <div className="form">
+            <input className="input" placeholder="Task title" value={draft.title}
+              onChange={(e) => setDraft({ ...draft, title: e.target.value })} autoFocus />
+            <div className="row">
+              <select className="select" value={draft.area} onChange={(e) => setDraft({ ...draft, area: e.target.value })}>
+                {AREAS.map((a) => <option key={a}>{a}</option>)}
+              </select>
+              <select className="select" value={draft.priority} onChange={(e) => setDraft({ ...draft, priority: e.target.value })}>
+                {PRIORITIES.map((p) => <option key={p}>{p}</option>)}
+              </select>
+              <select className="select" value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })}>
+                {STATUSES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+              </select>
+            </div>
+            <textarea className="input" placeholder="Notes (optional)" value={draft.notes}
+              onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
+            <div className="form-actions">
+              <button className="btn" onClick={addTask}>Add</button>
+              <button className="btn ghost" onClick={() => { setAdding(false); setDraft(emptyDraft); }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Board */}
+      <div className="board">
+        {STATUSES.map((col) => {
+          const items = filtered.filter((t) => t.status === col.key);
+          return (
+            <div className="col" key={col.key}>
+              <div className="col-head">
+                <span className="swatch" style={{ background: col.color }} />
+                <span className="title">{col.label}</span>
+                <span className="count">{items.length}</span>
+              </div>
+              <div className="col-body">
+                {items.map((t) =>
+                  editingId === t.id ? (
+                    <div className="card" key={t.id}>
+                      <div className="form">
+                        <input className="input" value={editDraft.title}
+                          onChange={(e) => setEditDraft({ ...editDraft, title: e.target.value })} />
+                        <div className="row">
+                          <select className="select" value={editDraft.area} onChange={(e) => setEditDraft({ ...editDraft, area: e.target.value })}>
+                            {AREAS.map((a) => <option key={a}>{a}</option>)}
+                          </select>
+                          <select className="select" value={editDraft.priority} onChange={(e) => setEditDraft({ ...editDraft, priority: e.target.value })}>
+                            {PRIORITIES.map((p) => <option key={p}>{p}</option>)}
+                          </select>
+                        </div>
+                        <textarea className="input" placeholder="Notes" value={editDraft.notes}
+                          onChange={(e) => setEditDraft({ ...editDraft, notes: e.target.value })} />
+                        <div className="form-actions">
+                          <button className="btn sm" onClick={saveEdit}>Save</button>
+                          <button className="btn ghost sm" onClick={() => setEditingId(null)}>Cancel</button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="card" key={t.id}>
+                      <div className="ttl">{t.title}</div>
+                      {t.notes ? <div className="notes">{t.notes}</div> : null}
+                      <div className="chips">
+                        <span className="chip area">{t.area}</span>
+                        <span className={`chip ${t.priority.toLowerCase()}`}>{t.priority}</span>
+                      </div>
+                      <div className="card-actions">
+                        <select className="mini" value={t.status} onChange={(e) => patch(t.id, { status: e.target.value })} title="Move">
+                          {STATUSES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+                        </select>
+                        <div className="spacer" />
+                        <button className="iconbtn" title="Edit"
+                          onClick={() => { setEditingId(t.id); setEditDraft({ title: t.title, area: t.area, status: t.status, priority: t.priority, notes: t.notes || '' }); }}>✎</button>
+                        <button className="iconbtn" title="Delete" onClick={() => remove(t.id)}>🗑</button>
+                      </div>
+                    </div>
+                  ),
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Setup() {
+  return (
+    <div className="setup">
+      <h2>Almost there — connect Supabase</h2>
+      <p>The tracker needs a free Supabase database so your team&apos;s edits are shared. Set two env vars and reload.</p>
+      <ol>
+        <li>Create a free project at <code>supabase.com</code>.</li>
+        <li>In Supabase → <b>SQL Editor</b>, run the contents of <code>supabase/schema.sql</code> (creates + seeds the table).</li>
+        <li>In Supabase → <b>Project Settings → API</b>, copy the <b>Project URL</b> and the <b>anon public</b> key.</li>
+        <li>Set <code>NEXT_PUBLIC_SUPABASE_URL</code> and <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> — locally in <code>.env.local</code>, and in Vercel → Project → Settings → Environment Variables.</li>
+        <li>Redeploy / restart. Done.</li>
+      </ol>
+      <p className="muted">The anon key is safe to expose in the browser; keep the tracker URL private to your team.</p>
+    </div>
+  );
+}
