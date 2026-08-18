@@ -1,4 +1,5 @@
 import './globals.css';
+import Lock from './Lock';
 
 export const metadata = {
   title: 'Skyline Launch Tracker',
@@ -8,7 +9,9 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <Lock>{children}</Lock>
+      </body>
     </html>
   );
 }
