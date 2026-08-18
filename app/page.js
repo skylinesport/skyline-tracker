@@ -103,7 +103,11 @@ export default function Page() {
     <div className="wrap">
       <div className="header">
         <div className="brand">
-          <div className="dot" />
+          <div className="dot">
+            <svg width="21" height="21" viewBox="0 0 21 21" fill="none" aria-hidden="true">
+              <path d="M2.5 15.2 7.6 8.3l3.7 4.2L17.9 3.5" stroke="#0d1204" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
           <div>
             <h1>Skyline Launch Tracker</h1>
             <p>What&apos;s done · what&apos;s left · updated live by the team</p>
@@ -155,9 +159,16 @@ export default function Page() {
           <option value="ALL">All priorities</option>
           {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
-        <input className="input" placeholder="Search…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <input type="search" aria-label="Search tasks" placeholder="Search tasks" value={query} onChange={(e) => setQuery(e.target.value)} />
         <div className="spacer" />
-        <button className="btn" onClick={() => setAdding((v) => !v)}>{adding ? 'Close' : '+ Add task'}</button>
+        <button className="add-task" onClick={() => setAdding((v) => !v)}>
+          {!adding && (
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+              <path d="M6.5 2v9M2 6.5h9" stroke="#0d1204" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          )}
+          {adding ? 'Close' : 'Add task'}
+        </button>
       </div>
 
       {/* Add panel */}
@@ -229,14 +240,24 @@ export default function Page() {
                         <span className="chip area">{t.area}</span>
                         <span className={`chip ${t.priority.toLowerCase()}`}>{t.priority}</span>
                       </div>
-                      <div className="card-actions">
-                        <select className="mini" value={t.status} onChange={(e) => patch(t.id, { status: e.target.value })} title="Move">
+                      <div className="card-foot">
+                        <select className="mini" aria-label="Change status" title="Move" value={t.status} onChange={(e) => patch(t.id, { status: e.target.value })}>
                           {STATUSES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
                         </select>
                         <div className="spacer" />
-                        <button className="iconbtn" title="Edit"
-                          onClick={() => { setEditingId(t.id); setEditDraft({ title: t.title, area: t.area, status: t.status, priority: t.priority, notes: t.notes || '' }); }}>✎</button>
-                        <button className="iconbtn" title="Delete" onClick={() => remove(t.id)}>🗑</button>
+                        <div className="card-actions">
+                          <button className="icon-btn" aria-label="Edit task"
+                            onClick={() => { setEditingId(t.id); setEditDraft({ title: t.title, area: t.area, status: t.status, priority: t.priority, notes: t.notes || '' }); }}>
+                            <svg viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                              <path d="M9.4 2.3l2.3 2.3-7 7H2.4V9.3l7-7z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+                          <button className="icon-btn danger" aria-label="Delete task" onClick={() => remove(t.id)}>
+                            <svg viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                              <path d="M2.8 4.2h8.4M5.6 4.2V2.8h2.8v1.4M4 4.2l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ),
