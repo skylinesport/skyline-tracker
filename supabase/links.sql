@@ -1,28 +1,37 @@
 -- ============================================================================
 -- Skyline Tracker — "Links & docs" table.
 -- Run this ONCE in Supabase → SQL Editor → New query → Run (same as schema.sql).
+-- Idempotent + no quoted identifiers (avoids smart-quote paste issues).
 -- ============================================================================
 
 create table if not exists public.links (
-  id          uuid primary key default gen_random_uuid(),
-  name        text not null default '',
-  url         text not null default '',
-  sort_order  int  not null default 0,
-  created_at  timestamptz not null default now()
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null default '',
+  url        text not null default '',
+  sort_order int  not null default 0,
+  created_at timestamptz not null default now()
 );
 
--- Open access (team edits, no login) — same model as the tasks table.
 alter table public.links enable row level security;
-drop policy if exists "links read"   on public.links;
-drop policy if exists "links write"  on public.links;
-drop policy if exists "links update" on public.links;
-drop policy if exists "links delete" on public.links;
-create policy "links read"   on public.links for select using (true);
-create policy "links write"  on public.links for insert with check (true);
-create policy "links update" on public.links for update using (true) with check (true);
-create policy "links delete" on public.links for delete using (true);
 
-alter publication supabase_realtime add table public.links;
+do $$
+begin
+  -- Open access (team edits, no login): one policy covering read/write/update/delete.
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'links' and policyname = 'links_all'
+  ) then
+    create policy links_all on public.links for all using (true) with check (true);
+  end if;
+
+  -- Live updates for everyone.
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'links'
+  ) then
+    alter publication supabase_realtime add table public.links;
+  end if;
+end $$;
 
 -- Seed a few useful links (only if empty).
 insert into public.links (name, url, sort_order)
