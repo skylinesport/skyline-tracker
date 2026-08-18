@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
+import Link from 'next/link';
 import { supabase, isConfigured } from '../lib/supabaseClient';
 
 const STATUSES = [
@@ -129,6 +130,17 @@ export default function Page() {
           <div className="big" style={{ color: stats.p0Left ? 'var(--p0)' : 'var(--lime)' }}>{stats.p0Left}</div>
           <div className="sub">P0 tasks not done</div>
         </div>
+        <Link href="/links" className="stat stat-link">
+          <div className="label">Links &amp; docs</div>
+          <div className="big linkrow">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+              <path d="M9 13a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1 1M13 9a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1-1"
+                stroke="var(--lime)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Open
+          </div>
+          <div className="sub">Shared links &amp; documents →</div>
+        </Link>
       </div>
 
       {/* Per-project rings — click one to focus the board on it */}
