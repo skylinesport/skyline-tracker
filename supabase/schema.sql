@@ -44,21 +44,28 @@ select * from (values
   ('Custom domain api.skylinesport.in with HTTPS',                              'Infra',    'done', 'P0', 6),
   ('Database public access closed (internal-only)',                             'Infra',    'done', 'P1', 7),
   ('Repos moved to new GitHub account, PRs merged',                             'Infra',    'done', 'P2', 8),
-  ('App: auth, onboarding, tournaments, rewards, profile, premium funnel',      'Frontend', 'done', 'P0', 9),
-  ('App wired to production backend; auth route guard; real error messages',    'Frontend', 'done', 'P1', 10),
+  ('App: auth, onboarding, tournaments, rewards, profile, premium funnel',      'App', 'done', 'P0', 9),
+  ('App wired to production backend; auth route guard; real error messages',    'App', 'done', 'P1', 10),
   -- To do (P0 — launch blockers)
   ('Build Android APK / production app (EAS) + store submission',               'Launch',   'todo', 'P0', 11),
-  ('Fix or hide Google sign-in (currently sends empty token)',                  'Frontend', 'todo', 'P0', 12),
+  ('Fix or hide Google sign-in (currently sends empty token)',                  'App', 'todo', 'P0', 12),
   ('Wire real SMS (MSG91) for phone OTP — codes only hit logs now',             'Backend',  'todo', 'P0', 13),
   ('Wire email SMTP for password reset — only logs now',                        'Backend',  'todo', 'P0', 14),
   -- To do (P1 — pre-launch hardening)
   ('Rotate Postgres password',                                                  'Infra',    'todo', 'P1', 15),
   ('Tighten CORS_ORIGINS (only if a web client is added)',                      'Backend',  'todo', 'P1', 16),
-  ('Real avatar hosting + upload (replace pravatar placeholders)',              'Frontend', 'todo', 'P1', 17),
+  ('Real avatar hosting + upload (replace pravatar placeholders)',              'App', 'todo', 'P1', 17),
   ('Privacy policy + store listing assets',                                     'Launch',   'todo', 'P1', 18),
   -- Nice-to-have (P2)
   ('Friendly root route (/ instead of "Cannot GET /")',                         'Backend',  'todo', 'P2', 19),
-  ('Avatar image-load fallback to initials',                                    'Frontend', 'todo', 'P2', 20),
-  ('CI/CD + basic monitoring/backups',                                          'Infra',    'todo', 'P2', 21)
+  ('Avatar image-load fallback to initials',                                    'App', 'todo', 'P2', 20),
+  ('CI/CD + basic monitoring/backups',                                          'Infra',    'todo', 'P2', 21),
+  -- Website
+  ('Landing page (hero, features, call-to-action)',                             'Website',  'todo', 'P0', 31),
+  ('Connect skylinesport.in domain + hosting',                                  'Website',  'todo', 'P0', 32),
+  ('App download links (App Store / Play Store badges)',                        'Website',  'todo', 'P1', 33),
+  ('Privacy Policy + Terms pages',                                              'Website',  'todo', 'P0', 34),
+  ('SEO: meta tags + social share preview',                                     'Website',  'todo', 'P2', 35),
+  ('Contact / support page',                                                    'Website',  'todo', 'P2', 36)
 ) as seed(title, area, status, priority, sort_order)
 where not exists (select 1 from public.tasks);
