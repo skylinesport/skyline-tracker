@@ -9,7 +9,7 @@ const STATUSES = [
   { key: 'blocked', label: 'Blocked', color: 'var(--blocked)' },
   { key: 'done', label: 'Done', color: 'var(--done)' },
 ];
-const AREAS = ['Backend', 'Frontend', 'Infra', 'Launch'];
+const AREAS = ['Website', 'Backend', 'App', 'Infra', 'Launch'];
 const PRIORITIES = ['P0', 'P1', 'P2'];
 
 const emptyDraft = { title: '', area: 'Backend', status: 'todo', priority: 'P1', notes: '' };
@@ -112,12 +112,12 @@ export default function Page() {
         <div className="sync"><span className="live" /> live &middot; changes sync for everyone</div>
       </div>
 
-      {/* Stats */}
-      <div className="stats">
+      {/* Top stats */}
+      <div className="stats2">
         <div className="stat">
           <div className="label">Overall progress</div>
           <div className="big">{stats.pct}%</div>
-          <div className="sub">{stats.done} of {stats.total} tasks done</div>
+          <div className="sub">{stats.done} of {stats.total} tasks done &middot; {stats.total - stats.done} left</div>
           <div className="progress-track"><div className="progress-fill" style={{ width: `${stats.pct}%` }} /></div>
         </div>
         <div className="stat">
@@ -125,24 +125,30 @@ export default function Page() {
           <div className="big" style={{ color: stats.p0Left ? 'var(--p0)' : 'var(--lime)' }}>{stats.p0Left}</div>
           <div className="sub">P0 tasks not done</div>
         </div>
-        <div className="stat" style={{ gridColumn: 'span 2' }}>
-          <div className="label">Progress by area</div>
-          <div className="areas">
-            {stats.byArea.map((a) => (
-              <div className="area-row" key={a.area}>
-                <span className="name">{a.area}</span>
-                <span className="track"><span className="fill" style={{ width: `${a.pct}%` }} /></span>
-                <span className="pct">{a.done}/{a.total}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+      </div>
+
+      {/* Per-project rings — click one to focus the board on it */}
+      <div className="section-label">Projects &nbsp;<span className="muted">· click to filter</span></div>
+      <div className="projects">
+        {stats.byArea.map((p) => (
+          <button
+            key={p.area}
+            className={`proj ${areaFilter === p.area ? 'active' : ''}`}
+            onClick={() => setAreaFilter(areaFilter === p.area ? 'ALL' : p.area)}>
+            <Donut pct={p.pct} />
+            <div className="proj-meta">
+              <div className="proj-name">{p.area}</div>
+              <div className="proj-sub">{p.done}/{p.total} done</div>
+              <div className="proj-sub2">{p.total - p.done} pending</div>
+            </div>
+          </button>
+        ))}
       </div>
 
       {/* Toolbar */}
       <div className="toolbar">
         <select className="select" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
-          <option value="ALL">All areas</option>
+          <option value="ALL">All projects</option>
           {AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
         </select>
         <select className="select" value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
@@ -241,6 +247,25 @@ export default function Page() {
         })}
       </div>
     </div>
+  );
+}
+
+function Donut({ pct }) {
+  const size = 62, stroke = 7;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c * (1 - pct / 100);
+  const done = pct >= 100;
+  return (
+    <svg width={size} height={size} className="donut" viewBox={`0 0 ${size} ${size}`}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#23271f" strokeWidth={stroke} />
+      <circle
+        cx={size / 2} cy={size / 2} r={r} fill="none"
+        stroke={done ? 'var(--lime)' : 'var(--lime)'} strokeWidth={stroke}
+        strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
+        transform={`rotate(-90 ${size / 2} ${size / 2})`} />
+      <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" className="donut-txt">{pct}%</text>
+    </svg>
   );
 }
 
