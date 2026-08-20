@@ -141,6 +141,18 @@ export default function Page() {
           </div>
           <div className="sub">Shared links &amp; documents →</div>
         </Link>
+        <Link href="/migration" className="stat stat-link">
+          <div className="label">Account migration</div>
+          <div className="big linkrow">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+              <path d="M11 2.5 4 5.2v4.3c0 4 2.9 7.3 7 8.5 4.1-1.2 7-4.5 7-8.5V5.2L11 2.5Z"
+                stroke="var(--lime)" strokeWidth="1.7" strokeLinejoin="round" />
+              <path d="M8.2 10.8 10.2 12.8 14 8.8" stroke="var(--lime)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Open
+          </div>
+          <div className="sub">Move accounts off personal email →</div>
+        </Link>
       </div>
 
       {/* Per-project rings — click one to focus the board on it */}
