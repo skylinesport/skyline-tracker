@@ -153,6 +153,18 @@ export default function Page() {
           </div>
           <div className="sub">Move accounts off personal email →</div>
         </Link>
+        <Link href="/campus-ambassador" className="stat stat-link">
+          <div className="label">Campus ambassador</div>
+          <div className="big linkrow">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+              <path d="M11 4 2.5 8 11 12l8.5-4L11 4Z" stroke="var(--lime)" strokeWidth="1.7" strokeLinejoin="round" />
+              <path d="M6 10v4c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5v-4M19.5 8v4"
+                stroke="var(--lime)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Open
+          </div>
+          <div className="sub">Recruit &amp; manage ambassadors →</div>
+        </Link>
       </div>
 
       {/* Per-project rings — click one to focus the board on it */}
