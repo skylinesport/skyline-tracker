@@ -327,13 +327,20 @@ input[type="search"]::-webkit-search-cancel-button {
 .mig-phase .section-label { margin-bottom: 10px; }
 
 .mig-row {
-  display: flex; gap: 13px; align-items: flex-start; width: 100%; text-align: left;
+  display: flex; gap: 10px; align-items: flex-start;
   background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-  padding: 13px 15px; margin-bottom: 9px; cursor: pointer;
+  padding: 13px 15px; margin-bottom: 9px;
   transition: background .15s ease, border-color .15s ease, opacity .15s ease;
 }
 .mig-row:hover { background: var(--card-hover); border-color: var(--line-2); }
 .mig-row.is-done { opacity: 0.62; }
+.mig-row.editing { display: block; }
+.mig-main {
+  display: flex; gap: 13px; align-items: flex-start; flex: 1; min-width: 0;
+  background: none; border: 0; padding: 0; margin: 0; text-align: left;
+  cursor: pointer; color: inherit; font: inherit;
+}
+.mig-actions { display: flex; gap: 4px; flex: none; }
 .mig-row.is-done .mig-task, .mig-row.is-done .mig-service { text-decoration: line-through; text-decoration-color: var(--muted); }
 
 .mig-check {
