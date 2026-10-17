@@ -413,3 +413,45 @@ input[type="search"]::-webkit-search-cancel-button {
   .ca-task .mini { order: 3; }
   .ca-task-actions { order: 4; margin-left: auto; }
 }
+
+/* ── Roadmap timeline (landing: Phase 1 / Phase 2) ── */
+.back-link { display: inline-block; font-size: 13px; color: var(--muted); text-decoration: none; margin-bottom: 14px; }
+.back-link:hover { color: var(--lime); }
+
+.timeline { position: relative; margin-top: 10px; }
+.timeline::before { content: ''; position: absolute; left: 25px; top: 30px; bottom: 30px; width: 2px; background: var(--border); }
+
+.phase { display: grid; grid-template-columns: 52px 1fr; gap: 16px; align-items: start; text-decoration: none; color: var(--text); margin-bottom: 20px; position: relative; }
+.phase-node { width: 52px; height: 52px; border-radius: 50%; background: var(--card); border: 2px solid var(--border); display: grid; place-items: center; z-index: 1; transition: border-color .15s, background .15s; }
+.phase-num { font-size: 20px; font-weight: 800; color: var(--muted); font-variant-numeric: tabular-nums; }
+.phase.phase-active .phase-node { border-color: var(--lime); background: var(--s2); }
+.phase.phase-active .phase-num { color: var(--lime); }
+
+.phase-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; transition: border-color .15s, background .15s; }
+.phase:hover .phase-card { border-color: var(--line-2); background: var(--card-hover); }
+.phase:hover .phase-node { border-color: var(--line-2); }
+.phase-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.phase-kicker { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 700; }
+.phase-card h2 { font-size: 22px; font-weight: 800; letter-spacing: -.4px; }
+.phase-card > p { font-size: 14px; color: var(--muted); margin-top: 6px; line-height: 1.55; max-width: 62ch; }
+.phase-open { margin-top: 14px; font-size: 13px; font-weight: 700; color: var(--lime); }
+
+.phase-status { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+.status-progress { color: var(--progress); background: rgba(59,130,246,.12); }
+.status-planning { color: var(--muted); background: rgba(255,255,255,.06); }
+
+.phase-progress { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.phase-progress .progress-track { flex: 1; margin-top: 0; }
+.phase-progress span { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Phase 2 placeholder */
+.phase2-empty { background: var(--card); border: 1px dashed var(--border); border-radius: 16px; padding: 44px 24px; text-align: center; margin-top: 10px; }
+.phase2-empty h2 { font-size: 18px; font-weight: 700; }
+.phase2-empty p { font-size: 14px; color: var(--muted); margin: 10px auto 0; max-width: 54ch; line-height: 1.6; }
+
+@media (max-width: 560px) {
+  .phase { grid-template-columns: 42px 1fr; gap: 12px; }
+  .phase-node { width: 42px; height: 42px; }
+  .phase-num { font-size: 17px; }
+  .timeline::before { left: 20px; }
+}
