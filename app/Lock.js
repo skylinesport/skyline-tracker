@@ -1,32 +1,48 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { supabase, isConfigured } from '../lib/supabaseClient';
 
-const CODE = '1111';
-const KEY = 'skyline_tracker_unlocked';
-
+// Real authentication gate. A signed-in Supabase session is required; the
+// session's JWT is what satisfies the authenticated-only RLS policies, so the
+// data is protected at the API layer, not just in the UI. Accounts are created
+// by an admin in the Supabase dashboard (public sign-ups are disabled).
 export default function Lock({ children }) {
   const [state, setState] = useState('checking'); // checking | locked | open
-  const [val, setVal] = useState('');
-  const [err, setErr] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    setState(typeof window !== 'undefined' && localStorage.getItem(KEY) === '1' ? 'open' : 'locked');
+    // No backend configured (local/mock mode) → nothing to protect.
+    if (!isConfigured) { setState('open'); return; }
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (active) setState(data.session ? 'open' : 'locked');
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setState(session ? 'open' : 'locked');
+    });
+    return () => { active = false; sub.subscription.unsubscribe(); };
   }, []);
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (val === CODE) {
-      localStorage.setItem(KEY, '1');
-      setState('open');
-    } else {
-      setErr(true);
-      setVal('');
+    setErr('');
+    setBusy(true);
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    setBusy(false);
+    if (error) {
+      setErr('Wrong email or password.');
+      setPassword('');
+      return;
     }
+    // onAuthStateChange flips state to 'open' on success.
   };
 
   if (state === 'checking') return <div className="lock" aria-hidden="true" />;
-  if (state === 'open') return children;
+  if (state === 'open') return (<>{children}<SignOut /></>);
 
   return (
     <div className="lock">
@@ -37,21 +53,40 @@ export default function Lock({ children }) {
           </svg>
         </div>
         <h2>Skyline Tracker</h2>
-        <p>Enter passcode to continue</p>
+        <p>Sign in to continue</p>
         <input
-          className="input lock-input"
-          type="password"
-          inputMode="numeric"
-          maxLength={8}
+          className="input lock-field"
+          type="email"
           autoFocus
-          aria-label="Passcode"
-          placeholder="••••"
-          value={val}
-          onChange={(e) => { setVal(e.target.value); setErr(false); }}
+          required
+          autoComplete="username"
+          aria-label="Email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => { setEmail(e.target.value); setErr(''); }}
         />
-        {err && <div className="lock-err">Wrong passcode. Try again.</div>}
-        <button className="add-task" type="submit">Unlock</button>
+        <input
+          className="input lock-field"
+          type="password"
+          required
+          autoComplete="current-password"
+          aria-label="Password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => { setPassword(e.target.value); setErr(''); }}
+        />
+        {err && <div className="lock-err">{err}</div>}
+        <button className="add-task" type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
       </form>
     </div>
+  );
+}
+
+function SignOut() {
+  if (!isConfigured) return null;
+  return (
+    <button className="signout-pill" onClick={() => supabase.auth.signOut()} aria-label="Sign out">
+      Sign out
+    </button>
   );
 }
