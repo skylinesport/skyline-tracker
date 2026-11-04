@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { supabase, isConfigured } from '../../lib/supabaseClient';
+import CampusDashboard from './CampusDashboard';
 
 const TABLE = 'campus_tasks';
 
@@ -19,6 +20,7 @@ const emptyDraft = { phase: '', task: '', owner: '', notes: '', status: 'todo' }
 const phaseTitle = (p) => p.replace(/^\s*\d+\s*[-.]\s*/, '');
 
 export default function CampusAmbassadorPage() {
+  const [tab, setTab] = useState('tasks');
   const [rows, setRows] = useState(null);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
@@ -136,7 +138,7 @@ export default function CampusAmbassadorPage() {
   );
 
   return (
-    <div className="wrap ca-wrap">
+    <div className={`wrap ca-wrap ${tab === 'dashboard' ? 'ca-wide' : ''}`}>
       <div className="ca-top">
         <Link href="/" className="back">← Tracker</Link>
         <h1>Campus Ambassador</h1>
@@ -145,6 +147,13 @@ export default function CampusAmbassadorPage() {
           Check items off, set <b>In&nbsp;Progress</b>, and add/edit/remove anything from here.
         </p>
       </div>
+
+      <div className="ca-tabs" role="tablist" aria-label="Campus ambassador views">
+        <button className={`ca-tab ${tab === 'tasks' ? 'active' : ''}`} role="tab" aria-selected={tab === 'tasks'} onClick={() => setTab('tasks')}>Tasks</button>
+        <button className={`ca-tab ${tab === 'dashboard' ? 'active' : ''}`} role="tab" aria-selected={tab === 'dashboard'} onClick={() => setTab('dashboard')}>Dashboard</button>
+      </div>
+
+      {tab === 'dashboard' ? <CampusDashboard /> : (<>
 
       {/* Overall progress */}
       <div className="ca-progress">
@@ -226,6 +235,8 @@ export default function CampusAmbassadorPage() {
           })}
         </div>
       )}
+
+      </>)}
     </div>
   );
 }
