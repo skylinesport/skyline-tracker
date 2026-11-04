@@ -7,13 +7,35 @@ const COLUMNS_TABLE = 'campus_ambassador_columns';
 const ROWS_TABLE = 'campus_ambassadors';
 const BUCKET = 'campus-docs';
 
+// Fixed highlight palette. The *meaning* of each colour is editable (stored in
+// the hidden legend row); the swatches themselves are fixed.
+const PALETTE = [
+  { key: 'green', hex: '#34d399', name: 'Green' },
+  { key: 'amber', hex: '#fbbf24', name: 'Amber' },
+  { key: 'red', hex: '#f87171', name: 'Red' },
+  { key: 'blue', hex: '#60a5fa', name: 'Blue' },
+  { key: 'purple', hex: '#c084fc', name: 'Purple' },
+];
+const colorOf = (key) => PALETTE.find((p) => p.key === key);
+const hexToRgba = (hex, a) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+};
+
 // Keep filenames storage-safe (spaces/odd chars break some signed URLs).
 const safeName = (name) => name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-80);
+
+// A hidden config row (sort_order -1) carries the colour -> meaning map; it is
+// never shown or counted as an ambassador.
+const isMeta = (r) => r?.data?.__meta === 'legend';
 
 export default function CampusDashboard() {
   const [columns, setColumns] = useState(null);
   const [rows, setRows] = useState(null);
+  const [legend, setLegend] = useState({});
   const [uploadingId, setUploadingId] = useState(null);
+  const metaId = useRef(null);
+  const creatingMeta = useRef(false);
 
   const fetchColumns = useCallback(async () => {
     if (!isConfigured) { setColumns([]); return; }
@@ -32,7 +54,16 @@ export default function CampusDashboard() {
       .select('*')
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true });
-    setRows(data || []);
+    const all = data || [];
+    const meta = all.find(isMeta);
+    metaId.current = meta?.id ?? null;
+    setLegend(meta?.data?.legend || {});
+    setRows(all.filter((r) => !isMeta(r)));
+    // Lazily create the legend store once if it is missing.
+    if (!meta && isConfigured && !creatingMeta.current) {
+      creatingMeta.current = true;
+      await supabase.from(ROWS_TABLE).insert({ data: { __meta: 'legend', legend: {} }, sort_order: -1 });
+    }
   }, []);
 
   useEffect(() => {
@@ -67,6 +98,15 @@ export default function CampusDashboard() {
     await supabase.from(COLUMNS_TABLE).delete().eq('id', col.id);
   };
 
+  // ── Legend (colour meanings) ───────────────────────────────────────────────
+  const setLegendLabel = async (key, label) => {
+    const next = { ...legend, [key]: label };
+    setLegend(next);
+    if (!metaId.current) return;
+    await supabase.from(ROWS_TABLE).update({ data: { __meta: 'legend', legend: next } }).eq('id', metaId.current);
+  };
+  const colorLabel = (key) => (legend[key]?.trim() || colorOf(key)?.name || key);
+
   // ── Rows ──────────────────────────────────────────────────────────────────
   const addRow = async () => {
     const nextOrder = (rows?.reduce((m, r) => Math.max(m, r.sort_order || 0), 0) ?? 0) + 1;
@@ -84,6 +124,12 @@ export default function CampusDashboard() {
     const current = row.data?.[col.id] ?? '';
     if (value === current) return;
     patchRow(row.id, { data: { ...(row.data || {}), [col.id]: value } });
+  };
+
+  const setRowColor = (row, key) => {
+    const data = { ...(row.data || {}) };
+    if (key) data.__color = key; else delete data.__color;
+    patchRow(row.id, { data });
   };
 
   const deleteRow = async (row) => {
@@ -131,12 +177,30 @@ export default function CampusDashboard() {
     );
   }
 
+  const EXTRA = 4; // #, Flag, Document, actions
+
   return (
     <div className="cad">
       <p className="ca-intro">
         One row per ambassador. Click any cell to edit — changes sync live for the team.
-        Add columns or rows anytime, and attach one document (offer letter, ID, agreement…) per ambassador.
+        Add columns or rows anytime, highlight a row with a colour, and attach one document per ambassador.
       </p>
+
+      {/* Colour legend — name what each highlight means */}
+      <div className="cad-legend">
+        <span className="cad-legend-title">Highlights</span>
+        {PALETTE.map((p) => (
+          <label className="cad-legend-item" key={p.key} title={`What does ${p.name} mean?`}>
+            <span className="cad-swatch" style={{ background: p.hex }} />
+            <input
+              className="cad-legend-input"
+              defaultValue={legend[p.key] || ''}
+              placeholder={p.name}
+              onBlur={(e) => setLegendLabel(p.key, e.target.value)}
+            />
+          </label>
+        ))}
+      </div>
 
       <div className="cad-toolbar">
         <button className="add-task" onClick={addRow}>+ Add ambassador</button>
@@ -149,6 +213,8 @@ export default function CampusDashboard() {
         <table className="cad-table">
           <thead>
             <tr>
+              <th className="cad-sn">#</th>
+              <th className="cad-flag-h">Flag</th>
               {columns.map((col) => (
                 <th key={col.id}>
                   <div className="cad-th">
@@ -171,33 +237,52 @@ export default function CampusDashboard() {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td className="cad-norows" colSpan={columns.length + 2}>
+                <td className="cad-norows" colSpan={columns.length + EXTRA}>
                   No ambassadors yet — click <b>+ Add ambassador</b> to create the first row.
                 </td>
               </tr>
             ) : (
-              rows.map((row) => (
-                <tr key={row.id}>
-                  {columns.map((col) => (
-                    <td key={col.id}>
-                      <input
-                        className="cad-cell"
-                        defaultValue={row.data?.[col.id] ?? ''}
-                        placeholder="—"
-                        onBlur={(e) => onCellBlur(row, col, e)}
-                      />
+              rows.map((row, i) => {
+                const c = colorOf(row.data?.__color);
+                const tint = c ? hexToRgba(c.hex, 0.14) : undefined;
+                return (
+                  <tr key={row.id} style={c ? { background: tint } : undefined}>
+                    <td className="cad-sn" style={c ? { boxShadow: `inset 3px 0 0 ${c.hex}` } : undefined}>{i + 1}</td>
+                    <td className="cad-flag">
+                      <span className="cad-dot" style={{ background: c ? c.hex : 'transparent', borderColor: c ? c.hex : 'var(--line-2)' }} />
+                      <select
+                        className="cad-colorsel"
+                        aria-label="Highlight colour"
+                        value={row.data?.__color || ''}
+                        onChange={(e) => setRowColor(row, e.target.value)}
+                      >
+                        <option value="">— None</option>
+                        {PALETTE.map((p) => (
+                          <option key={p.key} value={p.key}>{colorLabel(p.key)}</option>
+                        ))}
+                      </select>
                     </td>
-                  ))}
-                  <td className="cad-doc">
-                    <DocCell row={row} uploading={uploadingId === row.id} onUpload={uploadDoc} onRemove={removeDoc} />
-                  </td>
-                  <td className="cad-act">
-                    <button className="icon-btn danger" aria-label="Delete row" onClick={() => deleteRow(row)}>
-                      <svg viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2.8 4.2h8.4M5.6 4.2V2.8h2.8v1.4M4 4.2l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                    </button>
-                  </td>
-                </tr>
-              ))
+                    {columns.map((col) => (
+                      <td key={col.id}>
+                        <input
+                          className="cad-cell"
+                          defaultValue={row.data?.[col.id] ?? ''}
+                          placeholder="—"
+                          onBlur={(e) => onCellBlur(row, col, e)}
+                        />
+                      </td>
+                    ))}
+                    <td className="cad-doc">
+                      <DocCell row={row} uploading={uploadingId === row.id} onUpload={uploadDoc} onRemove={removeDoc} />
+                    </td>
+                    <td className="cad-act">
+                      <button className="icon-btn danger" aria-label="Delete row" onClick={() => deleteRow(row)}>
+                        <svg viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2.8 4.2h8.4M5.6 4.2V2.8h2.8v1.4M4 4.2l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
