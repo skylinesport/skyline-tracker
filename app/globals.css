@@ -414,6 +414,59 @@ input[type="search"]::-webkit-search-cancel-button {
   .ca-task-actions { order: 4; margin-left: auto; }
 }
 
+/* ── Campus Ambassador — tabs (Tasks / Dashboard) ─────────────────────── */
+.ca-wrap.ca-wide { max-width: 1200px; }
+.ca-tabs { display: inline-flex; gap: 4px; background: var(--s1); border: 1px solid var(--line); border-radius: 10px; padding: 4px; margin-bottom: 22px; }
+.ca-tab { height: 32px; padding: 0 16px; border: 0; background: transparent; color: var(--ink-2); font: inherit; font-size: 13px; font-weight: 600; border-radius: 7px; cursor: pointer; transition: background .12s, color .12s; }
+.ca-tab:hover { color: var(--ink); }
+.ca-tab.active { background: var(--lime); color: #0d1204; }
+
+/* ── Campus Ambassador — dashboard (roster table) ─────────────────────── */
+.cad .ca-intro { margin-bottom: 16px; }
+.cad-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.cad-count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.cad-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
+.cad-table { border-collapse: collapse; width: 100%; min-width: 640px; }
+.cad-table th, .cad-table td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); text-align: left; vertical-align: middle; }
+.cad-table th:last-child, .cad-table td:last-child { border-right: 0; }
+.cad-table tr:last-child td { border-bottom: 0; }
+.cad-table thead th { background: var(--s1); position: sticky; top: 0; z-index: 1; }
+
+.cad-th { display: flex; align-items: center; gap: 2px; padding: 4px 6px 4px 10px; }
+.cad-colname { flex: 1; min-width: 80px; height: 30px; background: transparent; border: 1px solid transparent; border-radius: 7px; color: var(--ink); font: inherit; font-size: 11.5px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; padding: 0 6px; }
+.cad-colname:hover { border-color: var(--line); }
+.cad-colname:focus { border-color: var(--line-2); background: var(--s2); outline: none; }
+.cad-delcol { opacity: 0; }
+.cad-th:hover .cad-delcol { opacity: 1; }
+
+.cad-cell { width: 100%; min-width: 120px; height: 38px; background: transparent; border: 1px solid transparent; color: var(--ink); font: inherit; font-size: 13px; padding: 0 11px; }
+.cad-cell::placeholder { color: var(--ink-3); }
+.cad-cell:hover { background: var(--card-hover); }
+.cad-cell:focus { border-color: var(--line-2); background: var(--s2); outline: none; }
+
+.cad-doc-h, .cad-act-h { font-size: 11px; letter-spacing: .3px; color: var(--ink-3); font-weight: 700; text-transform: uppercase; padding: 0 12px; }
+.cad-doc-h { min-width: 190px; }
+.cad-act-h { width: 44px; }
+.cad-doc { padding: 6px 10px; }
+.cad-act { text-align: center; }
+.cad-act .icon-btn { opacity: 0; }
+.cad-table tbody tr:hover .cad-act .icon-btn { opacity: 1; }
+
+.cad-docrow { display: flex; align-items: center; gap: 6px; }
+.cad-upload, .cad-link-btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: border-color .12s, color .12s, background .12s; }
+.cad-upload { background: transparent; border: 1px dashed var(--line-2); color: var(--ink-2); }
+.cad-upload:hover { border-color: var(--lime); color: var(--lime); }
+.cad-upload svg { width: 13px; height: 13px; }
+.cad-doclink { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 150px; color: var(--lime); text-decoration: none; font-size: 12.5px; }
+.cad-doclink svg { width: 14px; height: 14px; flex: none; }
+.cad-doclink:hover { text-decoration: underline; }
+.cad-docname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cad-link-btn { border: 1px solid var(--line); background: transparent; color: var(--ink-2); padding: 0 9px; }
+.cad-link-btn:hover { border-color: var(--line-2); color: var(--ink); }
+.cad-muted { font-size: 12.5px; color: var(--muted); }
+.cad-norows { padding: 22px 14px; color: var(--muted); font-size: 13.5px; }
+
 /* ── Roadmap timeline (landing: Phase 1 / Phase 2) ── */
 .back-link { display: inline-block; font-size: 13px; color: var(--muted); text-decoration: none; margin-bottom: 14px; }
 .back-link:hover { color: var(--lime); }
